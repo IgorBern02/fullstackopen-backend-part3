@@ -5,6 +5,15 @@ const cors = require("cors");
 
 app.use(cors());
 
+const path = require("path");
+
+// Servir arquivos estáticos do build do React
+app.use(express.static(path.resolve(__dirname, "build")));
+
+// Rota catch-all para retornar o index.html em rotas desconhecidas (React Router)
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "build", "index.html"));
+});
 morgan.token("body", (req) => {
   return req.method === "POST" ? JSON.stringify(req.body) : "";
 });
