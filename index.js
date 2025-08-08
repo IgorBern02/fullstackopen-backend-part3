@@ -3,33 +3,20 @@ const express = require("express");
 const app = express();
 const morgan = require("morgan");
 const cors = require("cors");
-const mongoose = require("mongoose");
 const path = require("path");
+const Person = require("./models/person"); // importa o modelo Mongoose corretamente
 
 // Middlewares
 app.use(express.json());
 app.use(cors());
 app.use(express.static(path.resolve(__dirname, "build")));
 
-morgan.token("body", (req) => {
-  return req.method === "POST" ? JSON.stringify(req.body) : "";
-});
+morgan.token("body", (req) =>
+  req.method === "POST" ? JSON.stringify(req.body) : ""
+);
 app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :body")
 );
-
-// Conexão com o banco de dados
-const password = process.env.MONGODB_PASSWORD;
-const url = `mongodb+srv://igorbern:${password}@cluster0.noebaoi.mongodb.net/phonebook?retryWrites=true&w=majority&appName=Cluster0`;
-
-mongoose.set("strictQuery", false);
-mongoose.connect(url);
-
-const personSchema = new mongoose.Schema({
-  name: String,
-  number: String,
-});
-const Person = mongoose.model("Person", personSchema);
 
 // Rotas da API
 
@@ -37,6 +24,27 @@ app.get("/api/persons", (request, response) => {
   Person.find({}).then((persons) => {
     response.json(persons);
   });
+});
+
+app.post("/api/persons", (request, response) => {
+  const body = request.body;
+  if (!body.name || !body.number) {
+    return response.status(400).json({ error: "name or number missing" });
+  }
+
+  const person = new Person({
+    name: body.name,
+    number: body.number,
+  });
+
+  person.save().then((savedPerson) => {
+    response.json(savedPerson);
+  });
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // app.get("/info", (request, response) => {
@@ -101,7 +109,3 @@ app.get("/api/persons", (request, response) => {
 // });
 
 // Iniciar servidor (caso você queira testar localmente com nodemon)
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
