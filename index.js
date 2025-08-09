@@ -4,7 +4,7 @@ const app = express();
 const morgan = require("morgan");
 const cors = require("cors");
 const path = require("path");
-const Person = require("./models/person"); // importa o modelo Mongoose corretamente
+const Person = require("./models/person");
 
 // Middlewares
 app.use(express.json());
@@ -18,16 +18,18 @@ app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :body")
 );
 
-// Rotas da API
-
-app.get("/api/persons", (request, response) => {
-  Person.find({}).then((persons) => {
-    response.json(persons);
-  });
+// Routes
+app.get("/api/persons", (request, response, next) => {
+  Person.find({})
+    .then((persons) => {
+      response.json(persons);
+    })
+    .catch(next);
 });
 
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", (request, response, next) => {
   const body = request.body;
+
   if (!body.name || !body.number) {
     return response.status(400).json({ error: "name or number missing" });
   }
@@ -37,25 +39,43 @@ app.post("/api/persons", (request, response) => {
     number: body.number,
   });
 
-  person.save().then((savedPerson) => {
-    response.json(savedPerson);
-  });
+  person
+    .save()
+    .then((savedPerson) => {
+      response.json(savedPerson);
+    })
+    .catch(next);
 });
 
-app.delete("/api/persons/:id", (request, response) => {
-  const id = request.params.id;
-
-  Person.findByIdAndDelete(id)
+app.delete("/api/persons/:id", (request, response, next) => {
+  Person.findByIdAndDelete(request.params.id)
     .then(() => {
       response.status(204).end();
     })
-    .catch((error) => {
-      console.error("Error deleting person:", error);
-      response.status(500).json({ error: "Failed to delete person" });
-    });
+    .catch(next);
 });
 
-// Iniciar servidor (caso você queira testar localmente com nodemon)
+// Middleware for routes unknown
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: "unknown endpoint" });
+};
+app.use(unknownEndpoint);
+
+// Middleware for treating errors
+const errorHandler = (error, request, response, next) => {
+  console.error("Error:", error.message);
+
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({ error: error.message });
+  }
+
+  next(error);
+};
+app.use(errorHandler);
+
+// Starting the server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
