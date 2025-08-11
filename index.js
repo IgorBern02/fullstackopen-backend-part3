@@ -20,11 +20,26 @@ app.use(
 
 // Routes
 app.get("/api/persons", (request, response, next) => {
-  Person.find({})
-    .then((persons) => {
-      response.json(persons);
+  Person.findbyId(request.params.id)
+    .then((person) => {
+      if (person) {
+        response.json(persons);
+      } else {
+        response.status(404).end();
+      }
     })
     .catch(next);
+});
+
+app.get("/info", (req, res, next) => {
+  Person.countDocuments({})
+    .then((count) => {
+      res.send(`
+        <p>Phonebook has info for ${count} people</p>
+        <p>${new Date()}</p>
+      `);
+    })
+    .catch((error) => next(error));
 });
 
 app.post("/api/persons", (request, response, next) => {
