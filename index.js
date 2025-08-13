@@ -20,13 +20,9 @@ app.use(
 
 // Routes
 app.get("/api/persons", (request, response, next) => {
-  Person.findbyId(request.params.id)
-    .then((person) => {
-      if (person) {
-        response.json(persons);
-      } else {
-        response.status(404).end();
-      }
+  Person.find({})
+    .then((persons) => {
+      response.json(persons);
     })
     .catch(next);
 });
